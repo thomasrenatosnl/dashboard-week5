@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard De Binnenplaats</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --neutral-bar: #c3c2b7;
+    --action-bg: #f0efec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --neutral-bar: #52514e;
+      --action-bg: #262624;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --neutral-bar: #52514e;
+    --action-bg: #262624;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 48px; }
+  header h1 { font-size: 1.6rem; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0 32px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .kpi .label { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 6px; }
+  .kpi .value { font-size: 1.6rem; font-weight: 650; margin: 0; letter-spacing: -0.01em; white-space: nowrap; }
+  .kpi .sub { font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.1rem; font-weight: 650; margin: 0 0 2px; }
+  .card .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin: 0 0 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; padding: 0; list-style: none; font-size: 0.85rem; color: var(--text-secondary); }
+  .legend li { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { font-family: inherit; }
+  .action { margin: 14px 0 0; padding: 12px 14px; background: var(--action-bg); border-radius: 8px; font-size: 0.95rem; }
+  .action strong { font-weight: 650; }
+  details { margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }
+  summary { cursor: pointer; }
+  table { border-collapse: collapse; margin-top: 8px; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-weight: 600; color: var(--text-primary); }
+  .tip {
+    position: absolute; pointer-events: none; z-index: 5;
+    background: var(--surface); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 8px 10px; font-size: 0.82rem; line-height: 1.4; white-space: nowrap;
+    opacity: 0; transition: opacity 80ms;
+  }
+  .tip.on { opacity: 1; }
+  .tip .t { font-weight: 650; margin-bottom: 2px; }
+  .tip .row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+  .tip .row span:last-child { font-variant-numeric: tabular-nums; margin-left: 12px; }
+  footer { color: var(--text-muted); font-size: 0.8rem; margin-top: 28px; }
+  footer p { margin: 0 0 6px; }
+
+  .section-title { font-size: 0.8rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 32px 0 10px; }
+  .week { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px; }
+  .week .headline { font-size: 1.25rem; font-weight: 650; margin: 0 0 4px; line-height: 1.35; }
+  .week .verdict { color: var(--text-secondary); margin: 0 0 14px; }
+  .week-nums { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0 0 12px; font-size: 0.9rem; color: var(--text-secondary); }
+  .week-nums strong { color: var(--text-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
+  .legend .tick { width: 14px; height: 2px; border-radius: 1px; background: var(--text-primary); display: inline-block; flex: none; }
+  .todo { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-top: 12px; }
+  .todo h2 { font-size: 1.05rem; font-weight: 650; margin: 0 0 8px; }
+  .todo ol { margin: 0; padding-left: 1.3em; }
+  .todo li { margin: 0 0 6px; }
+  .todo li:last-child { margin-bottom: 0; }
+  .todo a { color: inherit; text-decoration-color: var(--text-muted); text-underline-offset: 2px; }
+  .todo .when { color: var(--text-muted); font-size: 0.85rem; }
+  .kpis { margin-top: 0; }
+
+  @media (max-width: 720px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .week { padding: 16px; }
+    .week .headline { font-size: 1.1rem; }
+    .kpi .value { font-size: 1.3rem; }
+    .card { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Café De Binnenplaats</h1>
+    <p>Weekoverzicht · laatste kassadag zondag 4 oktober 2026 · fictieve oefendata</p>
+  </header>
+
+  <section class="week" aria-labelledby="w-title">
+    <p class="headline" id="w-title"></p>
+    <p class="verdict" id="w-verdict"></p>
+    <div class="week-nums" id="w-nums"></div>
+    <ul class="legend">
+      <li><span class="swatch" style="background:var(--series-1)"></span>Vorige week</li>
+      <li><span class="tick"></span>Normaal voor die dag (gemiddelde van de 4 weken ervoor, zonder eventdagen)</li>
+    </ul>
+    <div class="chart" id="cw"></div>
+    <details><summary>Bekijk als tabel</summary><div id="cw-table"></div></details>
+  </section>
+
+  <section class="todo" aria-labelledby="todo-title">
+    <h2 id="todo-title">Deze week doen</h2>
+    <ol>
+      <li><a href="#c2-title">Vraag de eventkalender 2027 op bij De Koepel</a> <span class="when">· events leveren 27 tot 79% extra op een zaterdag</span></li>
+      <li><a href="#c3-title">Bespreek de kostprijs van de Burger Koepel met de keuken</a> <span class="when">· laagste marge van de kaart</span></li>
+      <li><a href="#c1-title">Leg het rooster van de afgelopen 3 maanden naast de omzet per dagdeel</a> <span class="when">· eerst ochtend, maandag en dinsdag</span></li>
+    </ol>
+  </section>
+
+  <h2 class="section-title">Het afgelopen jaar · okt 2025 t/m okt 2026</h2>
+  <section class="kpis" aria-label="Kerncijfers van het afgelopen jaar">
+    <div class="kpi">
+      <p class="label">Omzet</p>
+      <p class="value" id="kpi-omzet"></p>
+      <p class="sub" id="kpi-omzet-sub"></p>
+    </div>
+    <div class="kpi">
+      <p class="label">Aantal bonnen</p>
+      <p class="value" id="kpi-bonnen"></p>
+      <p class="sub" id="kpi-bonnen-sub"></p>
+    </div>
+    <div class="kpi">
+      <p class="label">Gemiddelde bon</p>
+      <p class="value" id="kpi-gembon"></p>
+      <p class="sub">incl. btw</p>
+    </div>
+    <div class="kpi">
+      <p class="label">Marge op inkoop</p>
+      <p class="value" id="kpi-marge"></p>
+      <p class="sub" id="kpi-marge-sub"></p>
+    </div>
+  </section>
+
+  <h2 class="section-title">Waar het geld vandaan komt · hele jaar</h2>
+
+  <section class="card" aria-labelledby="c1-title">
+    <h2 id="c1-title">De lunch en het weekend dragen de zaak</h2>
+    <p class="subtitle">Gemiddelde omzet per open dag, per dagdeel (incl. btw)</p>
+    <ul class="legend" id="c1-legend"></ul>
+    <div class="chart" id="c1"></div>
+    <p class="action"><strong>Wat te doen:</strong> zorg dat de lunch van vrijdag tot en met zondag nooit tekortkomt aan kaart of bediening, en leg eerst het rooster naast deze omzet voordat je personeel verschuift.</p>
+    <details><summary>Bekijk als tabel</summary><div id="c1-table"></div></details>
+  </section>
+
+  <section class="card" aria-labelledby="c2-title">
+    <h2 id="c2-title">Events in De Koepel zijn de echte piekdagen</h2>
+    <p class="subtitle">Omzet op de eventdag tegenover een gewone zaterdag (gemiddelde van de zaterdagen 1 tot 4 weken ervoor en erna)</p>
+    <ul class="legend" id="c2-legend"></ul>
+    <div class="chart" id="c2"></div>
+    <p class="action"><strong>Wat te doen:</strong> vraag de eventkalender van De Koepel voor 2027 op en plan op die dagen extra personeel en voorraad voor lunch en diner.</p>
+    <details><summary>Bekijk als tabel</summary><div id="c2-table"></div></details>
+  </section>
+
+  <section class="card" aria-labelledby="c3-title">
+    <h2 id="c3-title">De Burger Koepel verkoopt het best, maar verdient het minst</h2>
+    <p class="subtitle">Marge per verkocht diner-hoofdgerecht: prijs zonder btw min kostprijs</p>
+    <div class="chart" id="c3"></div>
+    <p class="action"><strong>Wat te doen:</strong> bekijk met de keuken de kostprijs van de Burger Koepel en overweeg € 1 à € 2 prijsverhoging; bij gelijke verkoop levert dat € 2.250 tot € 4.500 extra marge per jaar op.</p>
+    <details><summary>Bekijk als tabel</summary><div id="c3-table"></div></details>
+  </section>
+
+  <footer>
+    <p>Omzet is inclusief btw, zonder fooi en na aftrek van correcties en kortingen. Marge op inkoop (brutomarge) = verkoopprijs zonder btw min kostprijs, vóór personeel, huur en energie.</p>
+    <p>"Normaal" bij vorige week = gemiddelde van dezelfde weekdag in de 4 weken ervoor; eventdagen tellen niet mee, omdat die een gewone dag te hoog laten lijken.</p>
+    <p>Bron: kassadata, productkaart en weerbestand van Café De Binnenplaats, samengevat in week-5/analyse.md (versie 2).</p>
+  </footer>
+</main>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+
+<script>
+const DATA = {"kpi":{"bonnen":35984,"dagen":357,"gembon":32.62,"marge":723040.51,"margepct":68.5,"omzet":1173755.78},
+"week":[{"dag":"ma","open":43,"totaal":1844,"Ochtend":214,"Lunch":918,"Middag":211,"Borrel":501,"Diner":0},
+{"dag":"di","open":52,"totaal":1879,"Ochtend":209,"Lunch":905,"Middag":229,"Borrel":537,"Diner":0},
+{"dag":"wo","open":52,"totaal":3008,"Ochtend":240,"Lunch":1035,"Middag":278,"Borrel":610,"Diner":845},
+{"dag":"do","open":51,"totaal":3188,"Ochtend":252,"Lunch":1125,"Middag":294,"Borrel":622,"Diner":894},
+{"dag":"vr","open":53,"totaal":4010,"Ochtend":332,"Lunch":1389,"Middag":365,"Borrel":830,"Diner":1095},
+{"dag":"za","open":53,"totaal":4961,"Ochtend":401,"Lunch":1724,"Middag":451,"Borrel":997,"Diner":1389},
+{"dag":"zo","open":53,"totaal":3816,"Ochtend":303,"Lunch":1306,"Middag":340,"Borrel":809,"Diner":1057}],
+"events":[{"datum":"2025-11-29","event":"Winterfair De Koepel","omzet":5528,"normaal":4357},
+{"datum":"2025-12-13","event":"Kerstmarkt Koepelplein","omzet":7658,"normaal":4290},
+{"datum":"2026-03-14","event":"Open dag De Koepel","omzet":7187,"normaal":4429},
+{"datum":"2026-05-23","event":"Koepelfestival","omzet":7531,"normaal":4771},
+{"datum":"2026-09-19","event":"Open Monumentendag","omzet":8327,"normaal":5182}],
+"diner":[{"product":"Dagschotel","prijs":18.5,"stuks":2024,"margeStuk":10.77,"margeTot":21803},
+{"product":"Burger Koepel","prijs":17.5,"stuks":2454,"margeStuk":7.16,"margeTot":17558},
+{"product":"Vegan burger","prijs":17,"stuks":1207,"margeStuk":10.20,"margeTot":12307},
+{"product":"Vis van de dag","prijs":22.5,"stuks":1179,"margeStuk":10.84,"margeTot":12783},
+{"product":"Saté van de haas","prijs":19.5,"stuks":1171,"margeStuk":11.09,"margeTot":12986},
+{"product":"Pasta truffel","prijs":16.5,"stuks":1628,"margeStuk":10.84,"margeTot":17644}],
+"vorigeWeek":{"van":"2026-09-28","tot":"2026-10-04","omzet":23041,"normOmzet":23575,"bonnen":698,"normBonnen":713,"gembon":33.01,"normGembon":33.08,"marge":14177,"normMarge":14502,
+"dagen":[{"datum":"2026-09-28","dag":"ma","omzet":1736,"normaal":1922,"temp":9.8,"regen":2.5},
+{"datum":"2026-09-29","dag":"di","omzet":1572,"normaal":2118,"temp":10.3,"regen":0},
+{"datum":"2026-09-30","dag":"wo","omzet":2808,"normaal":3092,"temp":11.5,"regen":0},
+{"datum":"2026-10-01","dag":"do","omzet":3676,"normaal":3372,"temp":17.7,"regen":0},
+{"datum":"2026-10-02","dag":"vr","omzet":3923,"normaal":4168,"temp":14.9,"regen":5.4},
+{"datum":"2026-10-03","dag":"za","omzet":5540,"normaal":4734,"temp":12,"regen":0},
+{"datum":"2026-10-04","dag":"zo","omzet":3785,"normaal":4170,"temp":9.7,"regen":0.9}]}};
+const WEEKS_PER_JAAR = 369 / 7; // periode 1 okt 2025 t/m 4 okt 2026
+
+const DAGNAAM = {ma:"maandag",di:"dinsdag",wo:"woensdag",do:"donderdag",vr:"vrijdag",za:"zaterdag",zo:"zondag"};
+const nl0 = new Intl.NumberFormat("nl-NL", {maximumFractionDigits: 0});
+const eur0 = v => "€\u00a0" + nl0.format(Math.round(v));
+const eur2 = v => "€\u00a0" + new Intl.NumberFormat("nl-NL", {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(v);
+const datumNL = s => new Date(s + "T12:00:00").toLocaleDateString("nl-NL", {day: "numeric", month: "short", year: "numeric"});
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+// ---- Kerncijfers
+const K = DATA.kpi;
+document.getElementById("kpi-omzet").textContent = eur0(K.omzet);
+document.getElementById("kpi-omzet-sub").textContent = "gem. " + eur0(K.omzet / WEEKS_PER_JAAR) + " per week";
+document.getElementById("kpi-bonnen").textContent = nl0.format(K.bonnen);
+document.getElementById("kpi-bonnen-sub").textContent = "gem. " + nl0.format(Math.round(K.bonnen / K.dagen)) + " per open dag";
+document.getElementById("kpi-gembon").textContent = eur2(K.gembon);
+document.getElementById("kpi-marge").textContent = eur0(K.marge);
+document.getElementById("kpi-marge-sub").textContent = String(K.margepct).replace(".", ",") + "% van de omzet zonder btw, vóór personeel en huur";
+
+// ---- Vorige week
+const VW = DATA.vorigeWeek;
+const pct = (a, b) => Math.round((a / b - 1) * 100);
+const pctTxt = p => (p > 0 ? "+" : p < 0 ? "−" : "") + Math.abs(p) + "%";
+const kort = s => new Date(s + "T12:00:00").toLocaleDateString("nl-NL", {day: "numeric", month: "short"});
+(function weekText() {
+  const p = pct(VW.omzet, VW.normOmzet);
+  const richting = p > 0 ? "boven" : "onder";
+  document.getElementById("w-title").textContent =
+    `Vorige week (${kort(VW.van)} – ${kort(VW.tot)}): ${eur0(VW.omzet)} omzet, ${Math.abs(p)}% ${richting} normaal`;
+  const opvallend = VW.dagen.filter(d => Math.abs(pct(d.omzet, d.normaal)) >= 15)
+    .map(d => `${DAGNAAM[d.dag]} ${pctTxt(pct(d.omzet, d.normaal))}`);
+  let oordeel = Math.abs(p) <= 5 ? "Een gewone week, niets om je zorgen over te maken."
+    : p < 0 ? "Rustiger dan normaal: kijk welke dagen achterbleven." : "Drukker dan normaal.";
+  if (opvallend.length) oordeel += " Opvallend: " + opvallend.join(", ") + ".";
+  document.getElementById("w-verdict").textContent = oordeel;
+  const n = (label, v, norm) => `<span>${label} <strong>${v}</strong> (normaal ${norm})</span>`;
+  document.getElementById("w-nums").innerHTML =
+    n("Bonnen", nl0.format(VW.bonnen), nl0.format(VW.normBonnen)) +
+    n("Gem. bon", eur2(VW.gembon), eur2(VW.normGembon)) +
+    n("Marge op inkoop", eur0(VW.marge), eur0(VW.normMarge));
+})();
+document.getElementById("cw-table").innerHTML = "<table><tr><th>Dag</th><th>Omzet</th><th>Normaal</th><th>Verschil</th><th>Max. temp</th><th>Regen</th></tr>" +
+  VW.dagen.map(d => `<tr><td>${DAGNAAM[d.dag]} ${kort(d.datum)}</td><td>${eur0(d.omzet)}</td><td>${eur0(d.normaal)}</td><td>${pctTxt(pct(d.omzet, d.normaal))}</td><td>${String(d.temp).replace(".", ",")} °C</td><td>${String(d.regen).replace(".", ",")} mm</td></tr>`).join("") + "</table>";
+
+// ---- Tooltip
+const tip = document.getElementById("tip");
+function showTip(ev, html) {
+  tip.innerHTML = html; tip.classList.add("on");
+  const pad = 12, r = tip.getBoundingClientRect();
+  let x = ev.clientX + pad + window.scrollX, y = ev.clientY + pad + window.scrollY;
+  if (ev.clientX + pad + r.width > window.innerWidth - 8) x = ev.clientX - r.width - pad + window.scrollX;
+  if (ev.clientY + pad + r.height > window.innerHeight - 8) y = ev.clientY - r.height - pad + window.scrollY;
+  tip.style.left = Math.max(8, x) + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.classList.remove("on"); }
+function bindTips(el, fn) {
+  el.querySelectorAll("[data-i]").forEach(n => {
+    n.addEventListener("mousemove", e => showTip(e, fn(+n.dataset.i)));
+    n.addEventListener("mouseleave", hideTip);
+    n.addEventListener("touchstart", e => { const t = e.touches[0]; showTip(t, fn(+n.dataset.i)); }, {passive: true});
+  });
+}
+document.addEventListener("touchstart", e => { if (!e.target.closest("[data-i]")) hideTip(); }, {passive: true});
+
+// Pad voor een staaf met 4px afgeronde data-kant (rechte kant aan de basislijn)
+function colPath(x, y, w, h, round) {
+  const r = round ? Math.min(4, h, w / 2) : 0;
+  if (h <= 0) return "";
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+function barPath(x, y, w, h) { // horizontaal, afgerond aan rechts
+  const r = Math.min(4, w, h / 2);
+  if (w <= 0) return "";
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+function niceMax(v, step) { return Math.ceil(v / step) * step; }
+function swatch(c) { return `<span class="swatch" style="background:var(${c})"></span>`; }
+
+// ---- Grafiek 1: gestapelde kolommen per weekdag
+const G1 = [
+  {key: "Lunch", label: "Lunch", color: "--series-1", get: d => d.Lunch},
+  {key: "Diner", label: "Diner", color: "--series-2", get: d => d.Diner},
+  {key: "Overig", label: "Ochtend, middag en borrel", color: "--series-3", get: d => d.Ochtend + d.Middag + d.Borrel},
+];
+document.getElementById("c1-legend").innerHTML = G1.map(s => `<li>${swatch(s.color)}${s.label}</li>`).join("");
+function drawC1() {
+  const el = document.getElementById("c1");
+  const W = Math.max(300, el.clientWidth), H = W < 500 ? 260 : 300;
+  const m = {t: 22, r: 8, b: 28, l: W < 500 ? 44 : 56};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const totals = DATA.week.map(d => d.totaal);
+  const max = niceMax(Math.max(...totals), 1000);
+  const y = v => m.t + ih - v / max * ih;
+  const band = iw / DATA.week.length, bw = Math.min(W < 500 ? 28 : 40, band * 0.6);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gemiddelde omzet per open dag, per weekdag en dagdeel">`;
+  for (let v = 0; v <= max; v += 1000) {
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(${v === 0 ? "--baseline" : "--grid"})" stroke-width="1"/>`;
+    s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="var(--text-muted)">${v === 0 ? "€ 0" : "€ " + nl0.format(v)}</text>`;
+  }
+  DATA.week.forEach((d, i) => {
+    const x = m.l + band * i + (band - bw) / 2;
+    let acc = 0;
+    const vis = G1.filter(sr => sr.get(d) > 0);
+    vis.forEach((sr, j) => {
+      const v = sr.get(d), top = y(acc + v), h = y(acc) - top;
+      const gap = acc > 0 ? 2 : 0;
+      s += `<path d="${colPath(x, top, bw, h - gap, j === vis.length - 1)}" fill="var(${sr.color})"/>`;
+      acc += v;
+    });
+    s += `<text x="${x + bw / 2}" y="${y(acc) - 6}" text-anchor="middle" font-size="12" fill="var(--text-secondary)">${eur0(totals[i])}</text>`;
+    s += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--text-secondary)">${d.dag}</text>`;
+    s += `<rect data-i="${i}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}" fill="transparent"/>`;
+  });
+  el.innerHTML = s + "</svg>";
+  bindTips(el, i => {
+    const d = DATA.week[i];
+    return `<div class="t">${DAGNAAM[d.dag]}</div>` + G1.map(sr => `<div class="row"><span>${swatch(sr.color)} ${sr.label}</span><span>${eur0(sr.get(d))}</span></div>`).join("") +
+      `<div class="row"><span>Totaal per open dag</span><span>${eur0(totals[i])}</span></div>`;
+  });
+}
+document.getElementById("c1-table").innerHTML = "<table><tr><th>Dag</th><th>Open dagen</th><th>Ochtend</th><th>Lunch</th><th>Middag</th><th>Borrel</th><th>Diner</th><th>Totaal</th></tr>" +
+  DATA.week.map(d => `<tr><td>${DAGNAAM[d.dag]}</td><td>${d.open}</td><td>${eur0(d.Ochtend)}</td><td>${eur0(d.Lunch)}</td><td>${eur0(d.Middag)}</td><td>${eur0(d.Borrel)}</td><td>${d.Diner ? eur0(d.Diner) : "dicht"}</td><td>${eur0(d.totaal)}</td></tr>`).join("") + "</table>";
+
+// ---- Grafiek 2: eventdag tegenover gewone zaterdag (horizontaal, gegroepeerd)
+const G2 = [
+  {key: "normaal", label: "Gewone zaterdag", color: "--neutral-bar"},
+  {key: "omzet", label: "Eventdag", color: "--series-1"},
+];
+document.getElementById("c2-legend").innerHTML = G2.map(s => `<li>${swatch(s.color)}${s.label}</li>`).join("");
+function drawC2() {
+  const el = document.getElementById("c2");
+  const W = Math.max(300, el.clientWidth), narrow = W < 560;
+  const labelW = narrow ? 0 : 190, bh = 14, gapIn = 2, group = narrow ? 70 : 52;
+  const m = {t: 6, r: narrow ? 92 : 110, b: 26, l: labelW + 4};
+  const iw = W - m.l - m.r;
+  const H = m.t + DATA.events.length * group + m.b;
+  const tick = narrow ? 4000 : 2000;
+  const max = niceMax(Math.max(...DATA.events.map(e => e.omzet)), tick);
+  const x = v => m.l + v / max * iw;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Omzet op eventdagen tegenover een gewone zaterdag">`;
+  for (let v = 0; v <= max; v += tick) {
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${m.t}" y2="${H - m.b}" stroke="var(${v === 0 ? "--baseline" : "--grid"})" stroke-width="1"/>`;
+    s += `<text x="${x(v)}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--text-muted)">${v === 0 ? "€ 0" : "€ " + nl0.format(v)}</text>`;
+  }
+  DATA.events.forEach((e, i) => {
+    const g0 = m.t + i * group;
+    const by = narrow ? g0 + 22 : g0 + (group - (2 * bh + gapIn)) / 2;
+    if (narrow) {
+      s += `<text x="${m.l}" y="${g0 + 15}" font-size="12.5" fill="var(--text-primary)">${esc(e.event)} <tspan fill="var(--text-muted)">· ${datumNL(e.datum)}</tspan></text>`;
+    } else {
+      s += `<text x="${labelW - 8}" y="${by + bh - 2}" text-anchor="end" font-size="13" fill="var(--text-primary)">${esc(e.event)}</text>`;
+      s += `<text x="${labelW - 8}" y="${by + 2 * bh + gapIn + 1}" text-anchor="end" font-size="11.5" fill="var(--text-muted)">${datumNL(e.datum)}</text>`;
+    }
+    s += `<path d="${barPath(x(0), by, x(e.normaal) - x(0), bh)}" fill="var(--neutral-bar)"/>`;
+    s += `<path d="${barPath(x(0), by + bh + gapIn, x(e.omzet) - x(0), bh)}" fill="var(--series-1)"/>`;
+    const pct = Math.round((e.omzet / e.normaal - 1) * 100);
+    s += `<text x="${x(e.omzet) + 6}" y="${by + 2 * bh + gapIn - 3}" font-size="12.5" font-weight="600" fill="var(--text-primary)">+${pct}%</text>`;
+    s += `<rect data-i="${i}" x="0" y="${g0}" width="${W}" height="${group}" fill="transparent"/>`;
+  });
+  el.innerHTML = s + "</svg>";
+  bindTips(el, i => {
+    const e = DATA.events[i];
+    return `<div class="t">${esc(e.event)}</div><div style="color:var(--text-muted);margin-bottom:4px">${datumNL(e.datum)}</div>` +
+      `<div class="row"><span>${swatch("--series-1")} Eventdag</span><span>${eur0(e.omzet)}</span></div>` +
+      `<div class="row"><span>${swatch("--neutral-bar")} Gewone zaterdag</span><span>${eur0(e.normaal)}</span></div>` +
+      `<div class="row"><span>Extra</span><span>+${eur0(e.omzet - e.normaal)}</span></div>`;
+  });
+}
+document.getElementById("c2-table").innerHTML = "<table><tr><th>Event</th><th>Datum</th><th>Omzet</th><th>Gewone zaterdag</th><th>Extra</th></tr>" +
+  DATA.events.map(e => `<tr><td>${esc(e.event)}</td><td>${datumNL(e.datum)}</td><td>${eur0(e.omzet)}</td><td>${eur0(e.normaal)}</td><td>+${Math.round((e.omzet / e.normaal - 1) * 100)}%</td></tr>`).join("") + "</table>";
+
+// ---- Grafiek 3: marge per stuk, diner-hoofdgerechten
+function drawC3() {
+  const el = document.getElementById("c3");
+  const W = Math.max(300, el.clientWidth), narrow = W < 560;
+  const rows = [...DATA.diner].sort((a, b) => b.margeStuk - a.margeStuk);
+  const labelW = narrow ? 0 : 150, bh = 20, step = narrow ? 44 : 40;
+  const m = {t: 4, r: narrow ? 56 : 64, b: 26, l: labelW + 4};
+  const iw = W - m.l - m.r, H = m.t + rows.length * step + m.b;
+  const max = 12, x = v => m.l + v / max * iw;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Marge per verkocht diner-hoofdgerecht">`;
+  for (let v = 0; v <= max; v += 4) {
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${m.t}" y2="${H - m.b}" stroke="var(${v === 0 ? "--baseline" : "--grid"})" stroke-width="1"/>`;
+    s += `<text x="${x(v)}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--text-muted)">€ ${v}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const y0 = m.t + i * step, by = y0 + (narrow ? 18 : (step - bh) / 2);
+    const burger = r.product === "Burger Koepel";
+    const fill = burger ? "--series-2" : "--neutral-bar";
+    if (narrow) {
+      s += `<text x="${m.l}" y="${y0 + 13}" font-size="12.5" font-weight="${burger ? 650 : 400}" fill="var(--text-primary)">${esc(r.product)} <tspan fill="var(--text-muted)" font-weight="400">· ${nl0.format(r.stuks)} verkocht</tspan></text>`;
+      s += `<path d="${barPath(x(0), by, x(r.margeStuk) - x(0), bh - 6)}" fill="var(${fill})"/>`;
+      s += `<text x="${x(r.margeStuk) + 6}" y="${by + bh - 10}" font-size="12.5" font-weight="${burger ? 650 : 400}" fill="var(--text-primary)">${eur2(r.margeStuk)}</text>`;
+    } else {
+      s += `<text x="${labelW - 8}" y="${by + 11}" text-anchor="end" font-size="13" font-weight="${burger ? 650 : 400}" fill="var(--text-primary)">${esc(r.product)}</text>`;
+      s += `<text x="${labelW - 8}" y="${by + 25}" text-anchor="end" font-size="11.5" fill="var(--text-muted)">${nl0.format(r.stuks)} verkocht</text>`;
+      s += `<path d="${barPath(x(0), by, x(r.margeStuk) - x(0), bh)}" fill="var(${fill})"/>`;
+      s += `<text x="${x(r.margeStuk) + 6}" y="${by + 14}" font-size="13" font-weight="${burger ? 650 : 400}" fill="var(--text-primary)">${eur2(r.margeStuk)}</text>`;
+    }
+    s += `<rect data-i="${DATA.diner.indexOf(r)}" x="0" y="${y0}" width="${W}" height="${step}" fill="transparent"/>`;
+  });
+  el.innerHTML = s + "</svg>";
+  bindTips(el, i => {
+    const r = DATA.diner[i];
+    return `<div class="t">${esc(r.product)}</div>` +
+      `<div class="row"><span>Prijs op de kaart</span><span>${eur2(r.prijs)}</span></div>` +
+      `<div class="row"><span>Marge per stuk</span><span>${eur2(r.margeStuk)}</span></div>` +
+      `<div class="row"><span>Verkocht</span><span>${nl0.format(r.stuks)}</span></div>` +
+      `<div class="row"><span>Marge over het jaar</span><span>${eur0(r.margeTot)}</span></div>`;
+  });
+}
+document.getElementById("c3-table").innerHTML = "<table><tr><th>Gerecht</th><th>Prijs</th><th>Verkocht</th><th>Marge per stuk</th><th>Marge per jaar</th></tr>" +
+  [...DATA.diner].sort((a, b) => b.margeStuk - a.margeStuk).map(r => `<tr><td>${esc(r.product)}</td><td>${eur2(r.prijs)}</td><td>${nl0.format(r.stuks)}</td><td>${eur2(r.margeStuk)}</td><td>${eur0(r.margeTot)}</td></tr>`).join("") + "</table>";
+
+// ---- Weekgrafiek: vorige week per dag tegenover normaal
+function drawCW() {
+  const el = document.getElementById("cw");
+  const W = Math.max(300, el.clientWidth), H = W < 500 ? 210 : 230;
+  const m = {t: 22, r: 8, b: 28, l: W < 500 ? 44 : 56};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const max = niceMax(Math.max(...VW.dagen.map(d => Math.max(d.omzet, d.normaal))), 2000);
+  const y = v => m.t + ih - v / max * ih;
+  const band = iw / 7, bw = Math.min(W < 500 ? 28 : 40, band * 0.6);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Omzet per dag vorige week tegenover normaal">`;
+  for (let v = 0; v <= max; v += 2000) {
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(${v === 0 ? "--baseline" : "--grid"})" stroke-width="1"/>`;
+    s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="var(--text-muted)">${v === 0 ? "€ 0" : "€ " + nl0.format(v)}</text>`;
+  }
+  VW.dagen.forEach((d, i) => {
+    const x = m.l + band * i + (band - bw) / 2;
+    s += `<path d="${colPath(x, y(d.omzet), bw, y(0) - y(d.omzet), true)}" fill="var(--series-1)"/>`;
+    s += `<line x1="${x - 5}" x2="${x + bw + 5}" y1="${y(d.normaal)}" y2="${y(d.normaal)}" stroke="var(--surface)" stroke-width="5"/>`;
+    s += `<line x1="${x - 5}" x2="${x + bw + 5}" y1="${y(d.normaal)}" y2="${y(d.normaal)}" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round"/>`;
+    const p = pct(d.omzet, d.normaal);
+    if (Math.abs(p) >= 15) {
+      s += `<text x="${x + bw / 2}" y="${Math.min(y(d.omzet), y(d.normaal)) - 7}" text-anchor="middle" font-size="12.5" font-weight="650" fill="var(--text-primary)">${pctTxt(p)}</text>`;
+    }
+    s += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--text-secondary)">${d.dag}</text>`;
+    s += `<rect data-i="${i}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}" fill="transparent"/>`;
+  });
+  el.innerHTML = s + "</svg>";
+  bindTips(el, i => {
+    const d = VW.dagen[i];
+    return `<div class="t">${DAGNAAM[d.dag]} ${kort(d.datum)}</div>` +
+      `<div class="row"><span>${swatch("--series-1")} Omzet</span><span>${eur0(d.omzet)}</span></div>` +
+      `<div class="row"><span>Normaal</span><span>${eur0(d.normaal)}</span></div>` +
+      `<div class="row"><span>Verschil</span><span>${pctTxt(pct(d.omzet, d.normaal))}</span></div>` +
+      `<div class="row"><span>Weer</span><span>${String(d.temp).replace(".", ",")} °C, ${String(d.regen).replace(".", ",")} mm regen</span></div>`;
+  });
+}
+
+function drawAll() { drawCW(); drawC1(); drawC2(); drawC3(); }
+drawAll();
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(drawAll, 120); });
+</script>
+</body>
+</html>
